@@ -14,7 +14,15 @@ return new class extends Migration
         Schema::create('features', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('status');
+            $table->string('status')->default('Proposed');
+            $table->string('type')->default('Feature');
+            $table->text('description');
+            $table->smallInteger('effort_in_days')->unsigned()->default(0);
+            $table->smallInteger('priority')->unsigned()->default(0);
+            $table->decimal('cost', 10, 2)->default(0.00);
+            $table->date('target_delivery_date')->nullable();
+            $table->dateTime('delivered_at')->nullable();
+            $table->timestamps();
         });
     }
 
