@@ -2,6 +2,7 @@
 
 namespace App\Enums\Feature;
 
+use App\Enums\Traits\UseValueAsLabel;
 use BackedEnum;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
@@ -10,6 +11,7 @@ use Illuminate\Contracts\Support\Htmlable;
 
 enum FeatureStatus: string implements HasLabel, HasColor, HasIcon
 {
+    use UseValueAsLabel;
     case Proposed = 'Proposed';
     case Planned = 'Planned';
     case InProgress = 'In Progress';
@@ -18,16 +20,23 @@ enum FeatureStatus: string implements HasLabel, HasColor, HasIcon
 
     public function getColor(): string|array|null
     {
-        // TODO: Implement getColor() method.
+        return match ($this) {
+            self::Proposed => 'gray',
+            self::Planned => 'info',
+            self::InProgress => 'primary',
+            self::Completed => 'success',
+            self::Cancelled => 'danger',
+        };
     }
 
     public function getIcon(): string|BackedEnum|Htmlable|null
     {
-        // TODO: Implement getIcon() method.
-    }
-
-    public function getLabel(): string|Htmlable|null
-    {
-        return $this->value;
+        return match ($this) {
+            self::Proposed => 'heroicon-o-light-bulb',
+            self::Planned => 'heroicon-o-calendar',
+            self::InProgress => 'heroicon-o-cog',
+            self::Completed => 'heroicon-o-check-circle',
+            self::Cancelled => 'heroicon-o-x-circle',
+        };
     }
 }
