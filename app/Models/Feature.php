@@ -11,6 +11,8 @@ class Feature extends Model
     /** @use HasFactory<\Database\Factories\FeatureFactory> */
     use HasFactory;
 
+    protected static $unguarded = true;
+
     protected function casts(): array
     {
         return [
