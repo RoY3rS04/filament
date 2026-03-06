@@ -6,6 +6,7 @@ use App\Enums\Feature\FeatureStatus;
 use App\Enums\Feature\FeatureType;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Slider;
@@ -32,102 +33,126 @@ class FeatureForm
                     ->tabs([
                         Tabs\Tab::make('General')
                             ->columns(3)
-                            ->schema([
-                                TextInput::make('name')
-                                    ->required(),
-                                Select::make('status')
-                                    ->live()
-                                    ->options(FeatureStatus::class)
-                                    ->enum(FeatureStatus::class)
-                                    ->searchable()
-                                    ->required()
-                                    ->default(FeatureStatus::Proposed),
-                                Slider::make('priority')
-                                    ->extraFieldWrapperAttributes([
-                                        'class' => 'pl-3'
-                                    ])
-                                    ->required()
-                                    ->minValue(1)
-                                    ->maxValue(10)
-                                    ->pips(Slider\Enums\PipsMode::Steps)
-                                    ->step(1)
-                                    ->fillTrack()
-                                    ->default(0),
-//                    ->live()
-//                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
-//                        if ($state) {
-//                            $set('cost', $get('effort_in_days') * 1500);
-//                        } else {
-//                            $set('cost', $get('effort_in_days') * 1000);
-//                        }
-//                    })
-                                ToggleButtons::make('type')
-                                    ->hiddenLabel()
-                                    ->options(FeatureType::class)
-                                    ->enum(FeatureType::class)
-                                    ->inline()
-                                    ->required()
-                                    ->default(FeatureType::Feature),
-                                DatePicker::make('target_delivery_date')
-                                    ->rules([
-                                        function (Get $get) {
-                                            return \Illuminate\Validation\Rule::requiredIf(
-                                                $get('status') === FeatureStatus::Planned || $get('status') === FeatureStatus::InProgress
-                                            );
-                                        }
-                                    ])
-                                    ->visibleJs(<<<'JS'
-                                $get('status') === 'Planned' || $get('status') === 'In Progress'
-                            JS),
-                                DateTimePicker::make('delivered_at')
-                                    ->visibleJs(<<<'JS'
-                                $get('status') === 'Completed'
-                            JS),
-                                RichEditor::make('description')
-                                    ->extraInputAttributes([
-                                        'class' => 'min-h-[150px]'
-                                    ])
-                                    ->toolbarButtons([
-                                        ['bold', 'italic', 'underline', 'strike', 'link'],
-                                        ['h2', 'h3', 'alignStart', 'alignCenter', 'alignEnd'],
-                                        ['blockquote', 'codeBlock', 'bulletList', 'orderedList'],
-                                    ])
-                                    ->required()
-                                    ->columnSpanFull(),
-                            ]),
+                            ->schema(self::getGeneralTabSchema()),
                         Tabs\Tab::make('Effort and Cost')
                             ->columns(2)
+                            ->schema(self::getEffortAndCostTabSchema()),
+                        Tabs\Tab::make('Milestones')
+                            ->columns(1)
                             ->schema([
-                                TextInput::make('effort_in_days')
-                                    ->required()
-                                    ->numeric()
-                                    ->afterStateUpdatedJs(<<<'JS'
+                                Repeater::make('milestones')
+                                    ->label('Milestones')
+                                    ->relationship('milestones')
+                                    ->compact()
+                                    ->columns(3)
+                                    ->minItems(1)
+                                    ->maxItems(3)
+                                    ->table([
+                                        Repeater\TableColumn::make('Title*'),
+                                        Repeater\TableColumn::make('Due Date'),
+                                        Repeater\TableColumn::make('Is Completed'),
+                                    ])
+                                    ->nullable()
+                                    ->schema([
+                                        TextInput::make('title')
+                                            ->required(),
+                                        DatePicker::make('due_date')
+                                            ->required(),
+                                        Toggle::make('is_completed')
+                                            ->label('Completed')
+                                            ->default(false)
+                                    ]),
+                            ])
+                    ]),
+            ]);
+    }
+
+    private static function getGeneralTabSchema(): array
+    {
+        return [
+            TextInput::make('name')
+                ->required(),
+            Select::make('status')
+                ->live()
+                ->options(FeatureStatus::class)
+                ->enum(FeatureStatus::class)
+                ->searchable()
+                ->required()
+                ->default(FeatureStatus::Proposed),
+            Slider::make('priority')
+                ->extraFieldWrapperAttributes([
+                    'class' => 'pl-3'
+                ])
+                ->required()
+                ->minValue(1)
+                ->maxValue(10)
+                ->pips(Slider\Enums\PipsMode::Steps)
+                ->step(1)
+                ->fillTrack()
+                ->default(0),
+            ToggleButtons::make('type')
+                ->hiddenLabel()
+                ->options(FeatureType::class)
+                ->enum(FeatureType::class)
+                ->inline()
+                ->required()
+                ->default(FeatureType::Feature),
+            DatePicker::make('target_delivery_date')
+                ->rules([
+                    function (Get $get) {
+                        return \Illuminate\Validation\Rule::requiredIf(
+                            $get('status') === FeatureStatus::Planned || $get('status') === FeatureStatus::InProgress
+                        );
+                    }
+                ])
+                ->visibleJs(<<<'JS'
+                                $get('status') === 'Planned' || $get('status') === 'In Progress'
+                            JS),
+            DateTimePicker::make('delivered_at')
+                ->visibleJs(<<<'JS'
+                                $get('status') === 'Completed'
+                            JS),
+            RichEditor::make('description')
+                ->extraInputAttributes([
+                    'class' => 'min-h-[150px]'
+                ])
+                ->toolbarButtons([
+                    ['bold', 'italic', 'underline', 'strike', 'link'],
+                    ['h2', 'h3', 'alignStart', 'alignCenter', 'alignEnd'],
+                    ['blockquote', 'codeBlock', 'bulletList', 'orderedList'],
+                ])
+                ->required()
+                ->columnSpanFull(),
+        ];
+    }
+
+    private static function getEffortAndCostTabSchema(): array
+    {
+        return [
+            TextInput::make('effort_in_days')
+                ->required()
+                ->numeric()
+                ->afterStateUpdatedJs(<<<'JS'
                                         const isHighCost = $get('is_high_cost');
                                         const effort = $state;
                                         const costPerDay = isHighCost ? 1500 : 1000;
                                         $set('cost', effort * costPerDay);
                                     JS)
-                                    //                    ->live(onBlur: true)
-                                    //                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                                    //                        $set('cost', $get('is_high_cost') ? 1500 * $state : 1000 * $state);
-                                    //                    })
-                                    ->default(0),
-                                TextInput::make('cost')
-                                    ->required()
-                                    ->numeric()
-                                    ->default(0.0)
-                                    ->prefix('$'),
-                                Toggle::make('is_high_cost')
-                                    ->label('Is High cost')
-                                    ->dehydrated(false)
-                                    ->afterStateUpdatedJs(<<<'JS'
+                ->default(0),
+            TextInput::make('cost')
+                ->required()
+                ->numeric()
+                ->default(0.0)
+                ->prefix('$'),
+            Toggle::make('is_high_cost')
+                ->label('Is High cost')
+                ->dehydrated(false)
+                ->afterStateUpdatedJs(<<<'JS'
                                 const isHighCost = $state;
                                 const effort = $get('effort_in_days');
                                 const costPerDay = isHighCost ? 1500 : 1000;
                                 $set('cost', effort * costPerDay);
                             JS)
-                            ])
-                    ]),
-            ]);
+        ];
     }
 }
